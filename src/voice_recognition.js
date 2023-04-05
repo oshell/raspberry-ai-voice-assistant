@@ -1,11 +1,10 @@
 var vosk = require('vosk')
 
 const fs = require("fs");
-var mic = require("mic");
+const mic = require("mic");
 
-MODEL_PATH = __dirname + "/../language_models/vosk-model-small-en-us-0.15"
-console.log(MODEL_PATH);
-SAMPLE_RATE = 16000
+const MODEL_PATH = __dirname + "/../language_models/vosk-model-en-us-0.22"
+const SAMPLE_RATE = 16000
 
 if (!fs.existsSync(MODEL_PATH)) {
     console.log("Please download the model from https://alphacephei.com/vosk/models and unpack as " + MODEL_PATH + " in the current folder.")
@@ -14,34 +13,77 @@ if (!fs.existsSync(MODEL_PATH)) {
 
 vosk.setLogLevel(0);
 const model = new vosk.Model(MODEL_PATH);
-const rec = new vosk.Recognizer({model: model, sampleRate: SAMPLE_RATE});
+const rec = new vosk.Recognizer({ model: model, sampleRate: SAMPLE_RATE });
 
 var micInstance = mic({
     rate: String(SAMPLE_RATE),
     channels: '1',
     debug: false,
-    device: 'default',    
+    device: 'default',
 });
 
-var micInputStream = micInstance.getAudioStream();
 
-micInputStream.on('data', data => {
-    if (rec.acceptWaveform(data))
-        console.log(rec.result());
-    else
-        console.log(rec.partialResult());
-});
+let active = false;
 
-micInputStream.on('audioProcessExitComplete', function() {
-    console.log("Cleaning up");
-    console.log(rec.finalResult());
-    rec.free();
-    model.free();
-});
+const voiceRecognition = {
+    hotwords: [
+        'hey buddy',
+        'the buddy',
+    ],
+    start: () => {
+        const micInputStream = micInstance.getAudioStream();
 
-process.on('SIGINT', function() {
-    console.log("\nStopping");
-    micInstance.stop();
-});
+        micInputStream.on('data', data => {
+            voiceRecognition.checkHotword(data);
+            voiceRecognition.handleInput(data);
+        });
 
-micInstance.start();
+        micInputStream.on('audioProcessExitComplete', function () {
+            console.log(rec.finalResult());
+            rec.free();
+            model.free();
+        });
+
+        process.on('SIGINT', function () {
+            console.log("\nStopping");
+            micInstance.stop();
+        });
+
+        micInstance.start();
+    },
+    handleInput: (data) => {
+        if (!active) return;
+        if (rec.acceptWaveform(data)) {
+            const result = rec.result();
+            console.log(result.text);
+            if (result.text.length < 4) {
+                return;
+            }
+            fs.writeFile('latest_recording.txt', result.text, (err) => {
+                err && console.log(err);
+                active = false;
+            })
+        }
+    },
+    checkHotword: (data) => {
+        if (active) return;
+        if (rec.acceptWaveform(data)) {
+            const result = rec.result();
+            let match = false;
+            voiceRecognition.hotwords.forEach(hotword => {
+                if (result.text.includes(hotword)) {
+                    match = true;
+                }
+            });
+            if (match) {
+                console.log("activated");
+                active = true;
+                fs.writeFile('hotword_trigger.txt', Date.now().toString(), (err) => {
+                    err && console.log(err);
+                })
+            }
+        }
+    }
+}
+
+voiceRecognition.start();

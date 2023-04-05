@@ -4,6 +4,7 @@ node_modules
 
 
 # local env files
+.env
 .env.local
 .env.*.local
 
@@ -26,3 +27,7 @@ pnpm-debug.log*
 /dist_electron
 ./temp.wav
 language_models
+hotword_trigger.txt
+latest_recording.txt
+google_client_secret.json
+public/sounds/gpt_answer.mp3

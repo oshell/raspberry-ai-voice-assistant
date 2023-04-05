@@ -2,21 +2,14 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-        <v-img
-          :src="require('../assets/logo.svg')"
-          class="my-3"
-          contain
-          height="200"
-        />
+        <div class="avatar" >
+            <v-img :src="require('../assets/cyborg_corgi.webp')" :class="[status, 'my-3']" contain height="500" />
+            <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="amber"></v-progress-circular>
+          </div>
       </v-col>
 
       <v-col class="mb-4">
-        <h1 class="display-2 font-weight-bold mb-3">AI Assistant</h1>
-      </v-col>
-
-      <v-col cols="12">
-        <v-btn @click="start">Start</v-btn>
-        <v-btn @click="stop">stop</v-btn>
+        <p>Status: <span :class="status">{{ status }}</span></p>
       </v-col>
     </v-row>
   </v-container>
@@ -30,15 +23,25 @@ let audioChunks = [];
 export default {
   name: 'AiAssistant',
 
-  data: () => ({}),
+  data: () => ({
+    status: 'inactive',
+    loading: false
+  }),
   mounted() {
     // initialise recorder
     console.log('mounted');
     navigator.mediaDevices
       .getUserMedia({ audio: true, video: false })
       .then(this.initMediaRecorder);
+    ipcRenderer.on('hotword-trigger', this.handleHotwordTrigger);
+    ipcRenderer.on('answer-trigger', this.playAnswer);
+    ipcRenderer.on('recording-trigger', this.handleRecording);
   },
   methods: {
+    handleHotwordTrigger() {
+      this.status = 'active';
+      this.playHotwordAnswer();
+    },
     initMediaRecorder(stream) {
       console.log('init recorder');
       navigator.permissions.query({ name: 'microphone' });
@@ -82,6 +85,73 @@ export default {
 
       this.handleStop();
     },
+    playHotwordAnswer() {
+      const audio = document.createElement('audio');
+      audio.setAttribute('controls', '');
+      const audioURL = "./sounds/hotword_answer_1.mp3";
+      audio.src = audioURL;
+      audio.play();
+    },
+    playAnswer() {
+      this.loading = false;
+      const audio = document.createElement('audio');
+      audio.setAttribute('controls', '');
+      const audioURL = "./sounds/gpt_answer.mp3";
+      audio.src = audioURL;
+      audio.play();
+      setTimeout(() => {
+        this.status = 'inactive';
+      }, 3000)
+    },
+    handleRecording() {
+      this.active = false;
+      this.loading = true;
+    }
   },
 };
 </script>
+
+<style>
+.active {
+  color: green;
+}
+
+.inactive {
+  color: red;
+}
+
+.v-image.active {
+  background: rgba(52, 172, 224, 1);
+  box-shadow: 0 0 0 0 rgba(52, 172, 224, 1);
+  animation: pulse-blue 2s infinite;
+}
+
+@keyframes pulse-blue {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 172, 224, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 30px rgba(52, 172, 224, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(52, 172, 224, 0);
+  }
+}
+
+.avatar {
+  position: relative;
+  margin: 0 auto;
+  width: 355px;
+}
+
+.spinner {
+  position: absolute;
+    bottom: 30px;
+    right: 30px;
+}
+</style>

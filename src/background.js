@@ -3,7 +3,10 @@ import { app, protocol, BrowserWindow, ipcMain } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 import fs from "fs";
+
 const isDevelopment = process.env.NODE_ENV !== 'production'
+
+let win;
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -12,15 +15,13 @@ protocol.registerSchemesAsPrivileged([
 
 async function createWindow() {
   // Create the browser window.
-  const win = new BrowserWindow({
+  win = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-      
-      // Use pluginOptions.nodeIntegration, leave this alone
-      // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-      nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
-      contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true,
     }
   })
 
@@ -91,3 +92,21 @@ ipcMain.on("audio_input", (event, dataUrl) => {
     console.log('file saved to ', fileName);
   });
 })
+
+const hotwordTriggerFile = 'hotword_trigger.txt';
+fs.watchFile(hotwordTriggerFile, (curr, prev) => {
+  console.log(`${hotwordTriggerFile} changed!`);
+  win.webContents.send('hotword-trigger');
+});
+
+const recordingTriggerFile = 'latest_recording.txt';
+fs.watchFile(hotwordTriggerFile, (curr, prev) => {
+  console.log(`${hotwordTriggerFile} changed!`);
+  win.webContents.send('recording-trigger');
+});
+
+const answerTriggerFile = './public/sounds/gpt_answer.mp3';
+fs.watchFile(answerTriggerFile, (curr, prev) => {
+  console.log(`${hotwordTriggerFile} changed!`);
+  win.webContents.send('answer-trigger');
+});
