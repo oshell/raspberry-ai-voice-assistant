@@ -2,10 +2,13 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-        <div class="avatar" >
-            <v-img :src="require('../assets/cyborg_corgi.webp')" :class="[status, 'my-3']" contain height="500" />
-            <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="amber"></v-progress-circular>
+        <div class="avatar">
+          <div id="bars" v-if="status === 'speaking'">
+            <div class="bar" v-for="index in 10" :key="index"></div>
           </div>
+          <v-img :src="require('../assets/cyborg_corgi.webp')" :class="[status, 'my-3', 'avatar-img']" contain height="800" />
+          <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="amber"></v-progress-circular>
+        </div>
       </v-col>
 
       <v-col class="mb-4">
@@ -17,8 +20,6 @@
 
 <script>
 import { ipcRenderer } from 'electron';
-let mediaRecorder;
-let audioChunks = [];
 
 export default {
   name: 'AiAssistant',
@@ -28,90 +29,35 @@ export default {
     loading: false
   }),
   mounted() {
-    // initialise recorder
-    console.log('mounted');
-    navigator.mediaDevices
-      .getUserMedia({ audio: true, video: false })
-      .then(this.initMediaRecorder);
-    ipcRenderer.on('hotword-trigger', this.handleHotwordTrigger);
-    ipcRenderer.on('answer-trigger', this.playAnswer);
-    ipcRenderer.on('recording-trigger', this.handleRecording);
+    ipcRenderer.on('hotword', this.handleHotwordTrigger);
+    ipcRenderer.on('voice_input', this.handleVoiceInput);
+    ipcRenderer.on('gpt_start', this.handleGptStart);
+    ipcRenderer.on('tts', this.handlePlayAnswer);
+    ipcRenderer.on('tts_end', this.handlePlayEnd);
   },
   methods: {
     handleHotwordTrigger() {
+      this.status = 'speaking';
+    },
+    handleVoiceInput() {
       this.status = 'active';
-      this.playHotwordAnswer();
     },
-    initMediaRecorder(stream) {
-      console.log('init recorder');
-      navigator.permissions.query({ name: 'microphone' });
-      const options = { mimeType: 'audio/webm' };
-      mediaRecorder = new MediaRecorder(stream, options);
-      mediaRecorder.addEventListener('dataavailable', this.onDataInput);
-      mediaRecorder.addEventListener('onstop', this.handleStop);
-    },
-    start() {
-      console.log('start');
-      mediaRecorder.start();
-    },
-    stop() {
-      console.log('stop');
-      mediaRecorder.stop();
-    },
-    handleStop() {
-      const audioBlob = new Blob(audioChunks, {
-        type: 'audio/ogg; codecs=opus',
-      });
-
-      const audio = document.createElement('audio');
-      audio.setAttribute('controls', '');
-      const audioURL = window.URL.createObjectURL(audioBlob);
-      audio.src = audioURL;
-      audio.play();
-
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
-      reader.onloadend = function () {
-        var base64data = reader.result;
-        console.log(base64data);
-        ipcRenderer.send('audio_input', base64data);
-      };
-    },
-    onDataInput(e) {
-      console.log('data');
-      if (e.data.size > 0) {
-        audioChunks.push(e.data);
-      }
-
-      this.handleStop();
-    },
-    playHotwordAnswer() {
-      const audio = document.createElement('audio');
-      audio.setAttribute('controls', '');
-      const audioURL = "./sounds/hotword_answer_1.mp3";
-      audio.src = audioURL;
-      audio.play();
-    },
-    playAnswer() {
+    handlePlayAnswer() {
       this.loading = false;
-      const audio = document.createElement('audio');
-      audio.setAttribute('controls', '');
-      const audioURL = "./sounds/gpt_answer.mp3";
-      audio.src = audioURL;
-      audio.play();
-      setTimeout(() => {
-        this.status = 'inactive';
-      }, 3000)
+      this.status = 'speaking';
     },
-    handleRecording() {
-      this.active = false;
+    handlePlayEnd() {
+      this.status = 'inactive';
+    },
+    handleGptStart() {
+      this.status = 'inactive';
       this.loading = true;
     }
   },
 };
 </script>
 
-<style>
+<style lang="scss">
 .active {
   color: green;
 }
@@ -146,12 +92,98 @@ export default {
 .avatar {
   position: relative;
   margin: 0 auto;
-  width: 355px;
+  width: 575px;
+  height: 800px;
+  &-img {
+    height: 800px;
+  }
 }
 
 .spinner {
   position: absolute;
-    bottom: 30px;
-    right: 30px;
+  bottom: 30px;
+  right: 30px;
 }
-</style>
+
+
+#bars {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  bottom: 10%;
+  z-index: 1;
+  width: 100%;
+}
+
+.bar {
+  background: #b9af2c;
+  bottom: 1px;
+  height: 3px;
+  width: 10px;
+  margin: 0px 4px;
+  border-radius: 5px;
+  animation: sound 0ms -600ms linear infinite alternate;
+}
+
+@keyframes sound {
+  0% {
+    opacity: .35;
+    height: 3px;
+  }
+
+  100% {
+    opacity: 1;
+    height: 70px;
+  }
+}
+
+.bar:nth-child(1) {
+  left: 1px;
+  animation-duration: 474ms;
+}
+
+.bar:nth-child(2) {
+  left: 15px;
+  animation-duration: 433ms;
+}
+
+.bar:nth-child(3) {
+  left: 29px;
+  animation-duration: 407ms;
+}
+
+.bar:nth-child(4) {
+  left: 43px;
+  animation-duration: 458ms;
+}
+
+.bar:nth-child(5) {
+  left: 57px;
+  animation-duration: 400ms;
+}
+
+.bar:nth-child(6) {
+  left: 71px;
+  animation-duration: 427ms;
+}
+
+.bar:nth-child(7) {
+  left: 85px;
+  animation-duration: 441ms;
+}
+
+.bar:nth-child(8) {
+  left: 99px;
+  animation-duration: 419ms;
+}
+
+.bar:nth-child(9) {
+  left: 113px;
+  animation-duration: 487ms;
+}
+
+.bar:nth-child(10) {
+  left: 127px;
+  animation-duration: 442ms;
+}</style>

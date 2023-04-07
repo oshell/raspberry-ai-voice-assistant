@@ -3,6 +3,7 @@ import { app, protocol, BrowserWindow, ipcMain } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 import fs from "fs";
+import nodeChildProcess from 'child_process';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -93,20 +94,16 @@ ipcMain.on("audio_input", (event, dataUrl) => {
   });
 })
 
-const hotwordTriggerFile = 'hotword_trigger.txt';
-fs.watchFile(hotwordTriggerFile, (curr, prev) => {
-  console.log(`${hotwordTriggerFile} changed!`);
-  win.webContents.send('hotword-trigger');
-});
+let script = nodeChildProcess.spawn('node', ['src/voice_assistant.mjs']);
 
-const recordingTriggerFile = 'latest_recording.txt';
-fs.watchFile(hotwordTriggerFile, (curr, prev) => {
-  console.log(`${hotwordTriggerFile} changed!`);
-  win.webContents.send('recording-trigger');
-});
-
-const answerTriggerFile = './public/sounds/gpt_answer.mp3';
-fs.watchFile(answerTriggerFile, (curr, prev) => {
-  console.log(`${hotwordTriggerFile} changed!`);
-  win.webContents.send('answer-trigger');
+script.stdout.on('data', (data) => {
+    try {
+      const events = JSON.parse(data);
+      events.forEach(event => {
+        console.log(`${event.name}: ${event.value}`);
+        win.webContents.send(event.name);
+      });
+    } catch (error) {
+      console.log(`ERR: parsing failed: ${data}`);
+    } 
 });

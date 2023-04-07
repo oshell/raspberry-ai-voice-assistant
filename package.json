@@ -14,11 +14,13 @@
   "main": "background.js",
   "dependencies": {
     "@google-cloud/text-to-speech": "4.2.1",
+    "audic": "3.0.1",
     "chatgpt": "5.2.2",
     "core-js": "^3.6.5",
     "dotenv": "16.0.3",
     "isomorphic-fetch": "3.0.0",
     "node-fetch": "3.3.1",
+    "play-sound": "1.1.5",
     "sound-play": "1.1.0",
     "vosk": "^0.3.39",
     "vue": "^2.6.11",
