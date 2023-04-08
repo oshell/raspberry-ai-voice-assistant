@@ -82,28 +82,17 @@ if (isDevelopment) {
   }
 }
 
-ipcMain.on("audio_input", (event, dataUrl) => {
-  const fileContents = Buffer.from(
-    dataUrl.split('base64,')[1],
-    'base64'
-  )
-  const fileName = 'temp.wav';
-  fs.writeFile(fileName, fileContents, (err) => {
-    if (err) return console.error(err);
-    console.log('file saved to ', fileName);
-  });
-})
+function handleNotification(data) {
+  try {
+    const events = JSON.parse(data);
+    events.forEach(event => {
+      console.log(`${event.name}: ${event.value}`);
+      win.webContents.send(event.name);
+    });
+  } catch (error) {
+    console.log(`ERR: parsing failed: ${data}`);
+  } 
+}
 
 let script = nodeChildProcess.spawn('node', ['src/voice_assistant.mjs']);
-
-script.stdout.on('data', (data) => {
-    try {
-      const events = JSON.parse(data);
-      events.forEach(event => {
-        console.log(`${event.name}: ${event.value}`);
-        win.webContents.send(event.name);
-      });
-    } catch (error) {
-      console.log(`ERR: parsing failed: ${data}`);
-    } 
-});
+script.stdout.on('data', handleNotification);

@@ -49,9 +49,9 @@ if (!fs.existsSync(MODEL_PATH)) {
 vosk.setLogLevel(0);
 const debug = false;
 const model = new vosk.Model(MODEL_PATH);
-const rec = new vosk.Recognizer({ model: model, sampleRate: SAMPLE_RATE });
+let rec = new vosk.Recognizer({ model: model, sampleRate: SAMPLE_RATE });
 
-const systemMessage = `You are CorgiAI, a virtual dog and voice assistant coming from the future. Your name is ${voiceAssistantNames[lang]}. You love your owner Hoschi. You always try to be funny.
+const systemMessage = `You are CorgiAI, a virtual dog and voice assistant coming from the future. Your name is ${voiceAssistantNames[lang]}. You love your owner Hoschi. You try to keep your answers below 100 words.
 Current date: ${new Date().toISOString()}\n\n`
 const chatGPTAPI = new ChatGPTAPI({ apiKey: process.env.OPEN_AI_APIKEY, systemMessage })
 const ttsApi = new textToSpeech.TextToSpeechClient();
@@ -71,7 +71,6 @@ async function synthesizeSpeech(text) {
     // Write the binary audio content to a local file
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(`./sounds/${lang}/gpt_answer.mp3`, response.audioContent, 'binary');
-
 }
 
 async function askChatGpt(message) {
@@ -93,6 +92,10 @@ const micInstance = mic({
 
 let active = false;
 let disabled = false;
+let recordingCache = '';
+let cacheCounter = 0;
+const minimumDisabledMs = 4000;
+const maxAttemptsRecording = 5;
 
 const voiceRecognition = {
     hotwords: {
@@ -129,22 +132,42 @@ const voiceRecognition = {
         micInstance.start();
     },
     handleInput: async (data) => {
+        if (disabled) {
+            rec.reset();
+        }
         if (!active || disabled) return;
-        if (rec.acceptWaveform(data)) {
-            const result = rec.result();
+        const isSilent = rec.acceptWaveform(data);
 
-            // normalize
-            if (result.text.startsWith('einen')) {
-                result.text = result.text === 'einen' ? '' : result.text.substring(4);
-            }
+        let isFinalAttempt = false;
+        let result = rec.partialResult();
 
-            if (result.text.length < 4) {
-                return;
-            }
+        let inputTooShort = result.partial && result.partial.length < 6;
+        if (!result.partial || inputTooShort) {
+            return;
+        }
+        if (result.partial === recordingCache) {
+            cacheCounter++;
+        } else {
+            recordingCache = result.partial;
+            cacheCounter = 0;
+        }
 
-            if (result.text.includes('how can I help')) {
-                console.log(JSON.stringify({ name: 'ERR:', value: 'self recording' }));
-                return;
+        if (cacheCounter > maxAttemptsRecording) {
+            isFinalAttempt = true;
+            result = rec.finalResult();
+        }
+
+        if (isSilent || isFinalAttempt) {
+            result = isFinalAttempt ? result : rec.result();
+            result = normalizeResult(result);
+            if (result.text && debug) {
+                const event = {
+                    name: 'voice_input_debug',
+                    value: result.text
+                };
+                const events = [event]
+                const data = JSON.stringify(events);
+                console.log(data);
             }
 
             let questionEvent = {
@@ -164,11 +187,11 @@ const voiceRecognition = {
 
             const answer = await askChatGpt(result.text);
 
-            const gptAmswerEvent = {
+            const gptAnswerEvent = {
                 name: 'answer',
                 value: answer
             }
-            events = [gptAmswerEvent];
+            events = [gptAnswerEvent];
             data = JSON.stringify(events);
             console.log(data);
 
@@ -182,9 +205,23 @@ const voiceRecognition = {
             console.log(data);
 
             playSound('gpt_answer', true)
+        } else {
+            if (result.partial && debug) {
+                const event = {
+                    name: 'voice_input_partial',
+                    value: result.partial
+                };
+                const events = [event]
+                const data = JSON.stringify(events);
+                console.log(data);
+            }
+
         }
     },
     checkHotword: async (data) => {
+        if (disabled) {
+            rec.reset();
+        }
         if (active || disabled) return;
         let result = '';
         if (rec.acceptWaveform(data)) {
@@ -194,6 +231,7 @@ const voiceRecognition = {
             result.text = result.partial;
         }
 
+        result = normalizeResult(result);
         let match = false;
         voiceRecognition.hotwords[lang].forEach(hotword => {
             if (result.text.includes(hotword)) {
@@ -203,7 +241,7 @@ const voiceRecognition = {
 
         if (result.text && debug) {
             const event = {
-                name: 'voice_input',
+                name: 'voice_input_hotword',
                 value: result.text
             };
             const events = [event]
@@ -226,14 +264,14 @@ const voiceRecognition = {
             playSound('hotword_answer_1', false);
             setTimeout(() => {
                 const event = {
-                    name: 'voice_input',
+                    name: 'voice_input_start',
                     value: true
                 };
                 const events = [event]
                 const data = JSON.stringify(events);
                 console.log(data);
                 disabled = false;
-            }, 4000)
+            }, minimumDisabledMs)
         }
     }
 }
@@ -242,7 +280,9 @@ async function playSound(name, triggerEvent) {
     disabled = true;
     const audic = new Audic(`./sounds/${lang}/${name}.mp3`);
     audic.addEventListener('ended', () => {
-        disabled = false;
+        setTimeout(() => {
+            disabled = false;
+        }, minimumDisabledMs);
         if (triggerEvent) {
             const event = {
                 name: 'tts_end',
@@ -256,5 +296,15 @@ async function playSound(name, triggerEvent) {
     await audic.play();
 }
 
-console.log('Start recording...');
+function normalizeResult(result) {
+    if (lang === 'de') {
+        if (result.text.startsWith('einen')) {
+            result.text = result.text === 'einen' ? '' : result.text.substring(4);
+        }
+    }
+
+    return result;
+}
+
+console.log(JSON.stringify([{name: 'LOG:', value: 'Start recording...'}]));
 voiceRecognition.start();

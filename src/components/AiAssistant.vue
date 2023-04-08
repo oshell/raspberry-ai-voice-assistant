@@ -10,16 +10,14 @@
           <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="amber"></v-progress-circular>
         </div>
       </v-col>
-
-      <v-col class="mb-4">
-        <p>Status: <span :class="status">{{ status }}</span></p>
-      </v-col>
     </v-row>
   </v-container>
 </template>
 
 <script>
 import { ipcRenderer } from 'electron';
+
+let playerActive = false;
 
 export default {
   name: 'AiAssistant',
@@ -30,10 +28,11 @@ export default {
   }),
   mounted() {
     ipcRenderer.on('hotword', this.handleHotwordTrigger);
-    ipcRenderer.on('voice_input', this.handleVoiceInput);
+    ipcRenderer.on('voice_input_start', this.handleVoiceInput);
     ipcRenderer.on('gpt_start', this.handleGptStart);
     ipcRenderer.on('tts', this.handlePlayAnswer);
     ipcRenderer.on('tts_end', this.handlePlayEnd);
+    window.addEventListener('keypress', this.handleKeyPress);
   },
   methods: {
     handleHotwordTrigger() {
@@ -52,6 +51,24 @@ export default {
     handleGptStart() {
       this.status = 'inactive';
       this.loading = true;
+    },
+    handleKeyPress(e) {
+      const num = parseInt(e.key);
+      if (playerActive) return;
+      if (isNaN(num)) return;
+      console.log('play');
+      const fileName = `sounds/temp_${num}.mp3`;
+      const audio = document.createElement('audio');
+      audio.setAttribute('controls', '');
+      audio.src = fileName;
+      audio.onended = () => {
+        this.status = 'inactive';
+        playerActive = false;
+      };
+      
+      audio.play();
+      playerActive = true;
+      this.status = 'speaking';
     }
   },
 };

@@ -31,3 +31,4 @@ hotword_trigger.txt
 latest_recording.txt
 google_client_secret.json
 sounds/*/gpt_answer.mp3
+public/sounds
