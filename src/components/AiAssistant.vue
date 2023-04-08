@@ -6,7 +6,7 @@
           <div id="bars" v-if="status === 'speaking'">
             <div class="bar" v-for="index in 10" :key="index"></div>
           </div>
-          <v-img :src="require('../assets/cyborg_corgi.jpg')" :class="[status, 'my-3', 'avatar-img']" contain height="800" />
+          <v-img :src="require('../assets/cyborg_corgi.jpg')" :class="[status, 'my-3', 'avatar-img']" contain height="575" />
           <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="amber"></v-progress-circular>
         </div>
       </v-col>
@@ -56,7 +56,6 @@ export default {
       const num = parseInt(e.key);
       if (playerActive) return;
       if (isNaN(num)) return;
-      console.log('play');
       const fileName = `sounds/temp_${num}.mp3`;
       const audio = document.createElement('audio');
       audio.setAttribute('controls', '');
@@ -110,9 +109,9 @@ export default {
   position: relative;
   margin: 0 auto;
   width: 575px;
-  height: 800px;
+  height: 575px;
   &-img {
-    height: 800px;
+    height: 575px;
   }
 }
 
