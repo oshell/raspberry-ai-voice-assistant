@@ -6,7 +6,7 @@
           <div id="bars" v-if="status === 'speaking'">
             <div class="bar" v-for="index in 10" :key="index"></div>
           </div>
-          <v-img :src="require('../assets/cyborg_corgi.webp')" :class="[status, 'my-3', 'avatar-img']" contain height="800" />
+          <v-img :src="require('../assets/cyborg_corgi.jpg')" :class="[status, 'my-3', 'avatar-img']" contain height="800" />
           <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="amber"></v-progress-circular>
         </div>
       </v-col>
