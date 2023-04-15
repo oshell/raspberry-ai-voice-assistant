@@ -6,31 +6,26 @@
           <div id="bars" v-if="status === 'speaking'">
             <div class="bar" v-for="index in 10" :key="index"></div>
           </div>
-          <v-img :src="require('../assets/cyborg_corgi.jpg')" :class="[status, 'my-3', 'avatar-img']" contain height="575" />
+          <v-img :src="require('../assets/cyborg_corgi.jpg')" :class="[status, 'my-3', 'avatar-img']" contain
+            height="575" />
           <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="amber"></v-progress-circular>
         </div>
       </v-col>
     </v-row>
     <v-row>
       <v-col cols="auto">
-        <v-dialog
-      v-model="dialog"
-      width="auto"
-    >
-      <v-card>
-        <v-toolbar
-              color="primary"
-              dark
-            >Meme Generator</v-toolbar>
-        <v-card-text>
-          <img :src="meme" />
-        </v-card-text>
-        <v-card-actions>
-          <v-btn color="primary" block @click="handleClose">{{ translations.thanks }}</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-    </v-col>
+        <v-dialog v-model="dialog" width="auto">
+          <v-card>
+            <v-toolbar color="#1e2038" dark>Meme Generator</v-toolbar>
+            <v-card-text>
+              <img class="meme" :src="meme" />
+            </v-card-text>
+            <v-card-actions>
+              <v-btn dark color="#1e2038" block @click="handleClose">{{ translations.thanks }}</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </v-col>
 
     </v-row>
   </v-container>
@@ -109,7 +104,7 @@ export default {
         this.status = 'inactive';
         playerActive = false;
       };
-      
+
       audio.play();
 
       playerActive = true;
@@ -164,6 +159,7 @@ export default {
   margin: 0 auto;
   width: 575px;
   height: 575px;
+
   &-img {
     height: 575px;
   }
@@ -256,4 +252,9 @@ export default {
 .bar:nth-child(10) {
   left: 127px;
   animation-duration: 442ms;
-}</style>
+}
+
+img.meme {
+  max-width: 100%;
+}
+</style>
