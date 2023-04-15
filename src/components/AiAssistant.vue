@@ -11,6 +11,28 @@
         </div>
       </v-col>
     </v-row>
+    <v-row>
+      <v-col cols="auto">
+        <v-dialog
+      v-model="dialog"
+      width="auto"
+    >
+      <v-card>
+        <v-toolbar
+              color="primary"
+              dark
+            >Meme Generator</v-toolbar>
+        <v-card-text>
+          <img :src="meme" />
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="primary" block @click="handleClose">{{ translations.thanks }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    </v-col>
+
+    </v-row>
   </v-container>
 </template>
 
@@ -18,13 +40,27 @@
 import { ipcRenderer } from 'electron';
 
 let playerActive = false;
+let audio = null;
+const lang = 'de';
+
+const translations = {
+  en: {
+    thanks: 'Thanks'
+  },
+  de: {
+    thanks: 'Danke'
+  }
+}
 
 export default {
   name: 'AiAssistant',
 
   data: () => ({
     status: 'inactive',
-    loading: false
+    loading: false,
+    dialog: false,
+    meme: null,
+    translations: translations[lang]
   }),
   mounted() {
     ipcRenderer.on('hotword', this.handleHotwordTrigger);
@@ -32,6 +68,8 @@ export default {
     ipcRenderer.on('gpt_start', this.handleGptStart);
     ipcRenderer.on('tts', this.handlePlayAnswer);
     ipcRenderer.on('tts_end', this.handlePlayEnd);
+    ipcRenderer.on('stop', this.handleStop);
+    ipcRenderer.on('meme', this.handleMeme);
     window.addEventListener('keypress', this.handleKeyPress);
   },
   methods: {
@@ -48,6 +86,13 @@ export default {
     handlePlayEnd() {
       this.status = 'inactive';
     },
+    handleStop() {
+      this.status = 'inactive';
+      if (audio) {
+        audio.pause();
+        audio = null;
+      }
+    },
     handleGptStart() {
       this.status = 'inactive';
       this.loading = true;
@@ -57,7 +102,7 @@ export default {
       if (playerActive) return;
       if (isNaN(num)) return;
       const fileName = `sounds/temp_${num}.mp3`;
-      const audio = document.createElement('audio');
+      audio = document.createElement('audio');
       audio.setAttribute('controls', '');
       audio.src = fileName;
       audio.onended = () => {
@@ -66,8 +111,17 @@ export default {
       };
       
       audio.play();
+
       playerActive = true;
       this.status = 'speaking';
+    },
+    handleMeme(eventName, value) {
+      this.meme = value;
+      this.dialog = true;
+    },
+    handleClose() {
+      this.meme = null;
+      this.dialog = false;
     }
   },
 };

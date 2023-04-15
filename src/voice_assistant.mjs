@@ -14,7 +14,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const lang = 'en';
+const lang = 'de';
 
 let lastRequestId = null;
 
@@ -51,7 +51,7 @@ const debug = false;
 const model = new vosk.Model(MODEL_PATH);
 let rec = new vosk.Recognizer({ model: model, sampleRate: SAMPLE_RATE });
 
-const systemMessage = `You are CorgiAI, a virtual dog and voice assistant coming from the future. Your name is ${voiceAssistantNames[lang]}. You love your owner Hoschi. You try to keep your answers below 100 words.
+const systemMessage = `You are CorgiAI, a virtual dog and voice assistant coming from the future. Your name is ${voiceAssistantNames[lang]}. You love your owner Hoschi.
 Current date: ${new Date().toISOString()}\n\n`
 const chatGPTAPI = new ChatGPTAPI({ apiKey: process.env.OPEN_AI_APIKEY, systemMessage })
 const ttsApi = new textToSpeech.TextToSpeechClient();
@@ -75,6 +75,8 @@ async function synthesizeSpeech(text) {
 
 async function askChatGpt(message) {
     const opts = {};
+
+    message = `${message}. answer in under 100 words.`;
     if (lastRequestId) {
         opts.parentMessageId = lastRequestId
     }
@@ -82,6 +84,21 @@ async function askChatGpt(message) {
     lastRequestId = response.id;
     return response.text;
 }
+
+
+async function fetchMeme() {
+    const memeApi = 'https://meme-api.com/gimme';
+    const response = await fetch(memeApi);
+    const result = await response.json();
+
+    const event = {
+        name: 'meme',
+        value: result.url
+    };
+    const events = [event]
+    const data = JSON.stringify(events);
+    console.log(data);
+  }
 
 const micInstance = mic({
     rate: String(SAMPLE_RATE),
@@ -109,6 +126,16 @@ const voiceRecognition = {
             'he charlie',
             'he charly',
         ],
+        meme: {
+            en: [
+                'make me laugh',
+                'make me love',
+            ],
+            de: [
+                'bring mich zum lachen',
+                'bring mich zum machen',
+            ]
+        }
     },
     start: () => {
         const micInputStream = micInstance.getAudioStream();
@@ -116,6 +143,7 @@ const voiceRecognition = {
         micInputStream.on('data', data => {
             voiceRecognition.checkHotword(data);
             voiceRecognition.handleInput(data);
+            voiceRecognition.checkStop(data);
         });
 
         micInputStream.on('audioProcessExitComplete', function () {
@@ -136,7 +164,7 @@ const voiceRecognition = {
             rec.reset();
         }
         if (!active || disabled) return;
-        const isSilent = rec.acceptWaveform(data);
+        const isSilent = rec.acceptWaveform(data);4
 
         let isFinalAttempt = false;
         let result = rec.partialResult();
@@ -232,6 +260,7 @@ const voiceRecognition = {
         }
 
         result = normalizeResult(result);
+
         let match = false;
         voiceRecognition.hotwords[lang].forEach(hotword => {
             if (result.text.includes(hotword)) {
@@ -273,6 +302,60 @@ const voiceRecognition = {
                 disabled = false;
             }, minimumDisabledMs)
         }
+
+        let memeMatch = false;
+        voiceRecognition.hotwords.meme[lang].forEach(hotword => {
+            if (result.text.includes(hotword)) {
+                memeMatch = true;
+            }
+        });
+
+        if (memeMatch) {
+            const event = {
+                name: 'meme_hotword',
+                value: true
+            };
+            const events = [event]
+            const data = JSON.stringify(events);
+            rec.reset();
+            console.log(data);
+            disabled = true;
+
+            fetchMeme();
+            playSound('meme_hotword_answer', false);
+            setTimeout(() => {
+                disabled = false;
+            }, minimumDisabledMs)
+        }
+    },
+    checkStop: async (data) => {
+        if (!disabled) return;
+        let result = '';
+        if (rec.acceptWaveform(data)) {
+            result = rec.result();
+        } else {
+            result = rec.partialResult();
+            result.text = result.partial;
+        }
+
+        result = normalizeResult(result);
+        let match = false;
+        if (result.text.includes('stop')) {
+            match = true;
+        }
+
+        if (match) {
+            const event = {
+                name: 'stop',
+                value: true
+            };
+            const events = [event]
+            const data = JSON.stringify(events);
+            rec.reset();
+            console.log(data);
+            active = false;
+            disabled = false;
+        }
     }
 }
 
@@ -301,8 +384,16 @@ function normalizeResult(result) {
         if (result.text.startsWith('einen')) {
             result.text = result.text === 'einen' ? '' : result.text.substring(4);
         }
-    }
 
+        result.text = result.text.replace('wie kann ich helfen', '');
+    }
+    if (lang === 'en') {
+        if (result.text.startsWith('the')) {
+            result.text = result.text === 'the' ? '' : result.text.substring(4);
+        }
+
+        result.text = result.text.replace('how can I help', '');
+    }
     return result;
 }
 

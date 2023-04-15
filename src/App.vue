@@ -2,13 +2,13 @@
   <v-app>
     <v-app-bar
       app
-      color="primary"
+      color="#1e2038"
       dark
     >
       Corgi AI
     </v-app-bar>
 
-    <v-main>
+    <v-main class="main-container">
       <AiAssistant />
     </v-main>
   </v-app>
@@ -29,3 +29,9 @@ export default {
   }),
 };
 </script>
+
+<style>
+.main-container {
+  background-color: #2f324d;
+}
+</style>

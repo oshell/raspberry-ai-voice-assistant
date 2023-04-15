@@ -2,8 +2,8 @@
 import { app, protocol, BrowserWindow, ipcMain } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
-import fs from "fs";
 import nodeChildProcess from 'child_process';
+import 'isomorphic-fetch';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -82,12 +82,13 @@ if (isDevelopment) {
   }
 }
 
+
 function handleNotification(data) {
   try {
     const events = JSON.parse(data);
     events.forEach(event => {
       console.log(`${event.name}: ${event.value}`);
-      win.webContents.send(event.name);
+      win.webContents.send(event.name, event.value);
     });
   } catch (error) {
     console.log(`ERR: parsing failed: ${data}`);

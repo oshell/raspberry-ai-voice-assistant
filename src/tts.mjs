@@ -53,8 +53,8 @@ async function listVoices(lang) {
     });
 }
 
-const text = "It should be a dog. A corgi to be specific. And his name should be Buddy.";
-const name = 'vid_answer_2';
+const text = "Sure. Check what I found online.";
+const name = 'meme_hotword_answer';
 const lang = 'en';
 
 synthesizeSpeech(text, name, lang);
