@@ -53,8 +53,8 @@ async function listVoices(lang) {
     });
 }
 
-const text = "Sure. Check what I found online.";
-const name = 'meme_hotword_answer';
-const lang = 'en';
+const text = "Spiel 'Die da', von den Fantastischen Vier";
+const name = 'temp_4';
+const lang = 'de';
 
 synthesizeSpeech(text, name, lang);

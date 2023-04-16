@@ -51,10 +51,10 @@ const debug = false;
 const model = new vosk.Model(MODEL_PATH);
 let rec = new vosk.Recognizer({ model: model, sampleRate: SAMPLE_RATE });
 
-const systemMessage = `You are CorgiAI, a virtual dog and voice assistant coming from the future. Your name is ${voiceAssistantNames[lang]}. You love your owner Hoschi.
-Current date: ${new Date().toISOString()}\n\n`
+const systemMessage = `Du bist CorgiAI - eine virtueller braver Hund und Sprachassistent. Dein Name ist ${voiceAssistantNames[lang]}. Dein liebst deinen Besitzer Hoschi. Du bringst das in all deinen Antworten zum ausdruck.`;
 const chatGPTAPI = new ChatGPTAPI({ apiKey: process.env.OPEN_AI_APIKEY, systemMessage })
 const ttsApi = new textToSpeech.TextToSpeechClient();
+let memeLoop = false;
 
 async function synthesizeSpeech(text) {
     // Construct the request
@@ -76,7 +76,7 @@ async function synthesizeSpeech(text) {
 async function askChatGpt(message) {
     const opts = {};
 
-    message = `${message}. answer in under 100 words.`;
+    message = `${message}. Antworte in unter 30 Wörtern.`;
     if (lastRequestId) {
         opts.parentMessageId = lastRequestId
     }
@@ -111,7 +111,7 @@ let active = false;
 let disabled = false;
 let recordingCache = '';
 let cacheCounter = 0;
-const minimumDisabledMs = 4000;
+const minimumDisabledMs = 5000;
 const maxAttemptsRecording = 5;
 
 const voiceRecognition = {
@@ -311,6 +311,7 @@ const voiceRecognition = {
         });
 
         if (memeMatch) {
+            memeLoop = true;
             const event = {
                 name: 'meme_hotword',
                 value: true
@@ -326,6 +327,37 @@ const voiceRecognition = {
             setTimeout(() => {
                 disabled = false;
             }, minimumDisabledMs)
+        }
+
+        let memeContinueMatch = result.text.includes('nochmal');
+
+        if (memeContinueMatch && memeLoop) {
+            disabled = true;
+            const event = {
+                name: 'meme',
+                value: true
+            };
+            const events = [event]
+            const data = JSON.stringify(events);
+            console.log(data);
+            fetchMeme();
+            setTimeout(() => {
+                disabled = false;
+            }, 1000);
+        }
+
+        let stopMatch = result.text.includes('stop');
+
+        if (stopMatch && memeLoop) {
+            memeLoop = false;
+            const event = {
+                name: 'meme_stop',
+                value: true
+            };
+            const events = [event]
+            const data = JSON.stringify(events);
+            rec.reset();
+            console.log(data);
         }
     },
     checkStop: async (data) => {

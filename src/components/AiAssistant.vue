@@ -65,6 +65,7 @@ export default {
     ipcRenderer.on('tts_end', this.handlePlayEnd);
     ipcRenderer.on('stop', this.handleStop);
     ipcRenderer.on('meme', this.handleMeme);
+    ipcRenderer.on('meme_stop', this.handleMemeStop);
     window.addEventListener('keypress', this.handleKeyPress);
   },
   methods: {
@@ -96,7 +97,7 @@ export default {
       const num = parseInt(e.key);
       if (playerActive) return;
       if (isNaN(num)) return;
-      const fileName = `sounds/temp_${num}.mp3`;
+      const fileName = `sounds/${lang}/temp_${num}.mp3`;
       audio = document.createElement('audio');
       audio.setAttribute('controls', '');
       audio.src = fileName;
@@ -113,6 +114,10 @@ export default {
     handleMeme(eventName, value) {
       this.meme = value;
       this.dialog = true;
+    },
+    handleMemeStop() {
+      this.dialog = false;
+      this.meme = null;
     },
     handleClose() {
       this.meme = null;
@@ -256,5 +261,6 @@ export default {
 
 img.meme {
   max-width: 100%;
+  max-height: 600px;
 }
 </style>

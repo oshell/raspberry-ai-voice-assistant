@@ -97,3 +97,8 @@ function handleNotification(data) {
 
 let script = nodeChildProcess.spawn('node', ['src/voice_assistant.mjs']);
 script.stdout.on('data', handleNotification);
+
+process.on('exit', function() {
+  console.log('Killing child process onexit!');
+  script.kill();
+});
