@@ -36,3 +36,6 @@ npm run electron:serve
 - to change the language, adjust `lang` in `src/voice_assistant.mjs` (needs to have language model defined in `modelPaths`)
 - to change hotword, adjust `voiceRecognition.hotwords` in `src/voice_assistant.mjs`
 - to change personality, adjust `systemMessage` in `src/voice_assistant.mjs`
+- for custom text to speech, change text, name and lang in `src/tts.mjs` and run `node src/tts.mjs`
+- move custom mp3 to `public/sounds/{lang}/temp_1.mp3` and assistant will say it when pressing key `1` (used for media creation)
+
