@@ -1,14 +1,30 @@
 <template>
-  <v-container>
+  <v-container :class="['ai-assistant', status]">
     <v-row class="text-center">
       <v-col cols="12">
+        <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="#71eeff"></v-progress-circular>
         <div class="avatar">
-          <div id="bars" v-if="status === 'speaking'">
-            <div class="bar" v-for="index in 10" :key="index"></div>
-          </div>
-          <v-img :src="require('../assets/cyborg_corgi.jpg')" :class="[status, 'my-3', 'avatar-img']" contain
-            height="575" />
-          <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="amber"></v-progress-circular>
+          <v-row id="eyes">
+            <v-col cols="6" class="eye">
+              <div class="inner-eye left">
+                <div class="pupil"></div>
+              </div>
+            </v-col>
+            <v-col cols="6" class="eye">
+              <div class="inner-eye right">
+                <div class="pupil"></div>
+              </div>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col></v-col>
+            <v-col>
+              <div id="bars" :class="[status]">
+                <div class="bar" v-for="index in 10" :key="index"></div>
+              </div>
+            </v-col>
+            <v-col></v-col>
+          </v-row>
         </div>
       </v-col>
     </v-row>
@@ -26,8 +42,11 @@
           </v-card>
         </v-dialog>
       </v-col>
-
     </v-row>
+    <span class="active-indicator top"></span>
+    <span class="active-indicator right"></span>
+    <span class="active-indicator bottom"></span>
+    <span class="active-indicator left"></span>
   </v-container>
 </template>
 
@@ -77,10 +96,14 @@ export default {
     },
     handlePlayAnswer() {
       this.loading = false;
-      this.status = 'speaking';
+      setTimeout(() => {
+        this.status = 'speaking';
+        playerActive = true;
+      }, 2000);
     },
     handlePlayEnd() {
-      this.status = 'inactive';
+      setTimeout(() => {this.status = 'awake';}, 1000);
+      setTimeout(() => {this.status = 'inactive';}, 3000);
     },
     handleStop() {
       this.status = 'inactive';
@@ -90,7 +113,7 @@ export default {
       }
     },
     handleGptStart() {
-      this.status = 'inactive';
+      this.status = 'thinking';
       this.loading = true;
     },
     handleKeyPress(e) {
@@ -102,8 +125,10 @@ export default {
       audio.setAttribute('controls', '');
       audio.src = fileName;
       audio.onended = () => {
-        this.status = 'inactive';
-        playerActive = false;
+        setTimeout(() => {
+          this.status = 'inactive';
+          playerActive = false;
+        }, 1000)
       };
 
       audio.play();
@@ -128,6 +153,17 @@ export default {
 </script>
 
 <style lang="scss">
+.ai-assistant {
+  background-color: black;
+  height: 100vh;
+
+  &.active {
+    .active-indicator {
+      display: block;
+    }
+  }
+}
+
 .active {
   color: green;
 }
@@ -161,7 +197,7 @@ export default {
 
 .avatar {
   position: relative;
-  margin: 0 auto;
+  margin: 30vh auto;
   width: 575px;
   height: 575px;
 
@@ -172,8 +208,8 @@ export default {
 
 .spinner {
   position: absolute;
-  bottom: 30px;
-  right: 30px;
+  top: 100px;
+  right: 100px;
 }
 
 
@@ -181,20 +217,82 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  position: absolute;
-  bottom: 10%;
   z-index: 1;
-  width: 100%;
+  width: 50%;
+  margin-top: 30px;
+
+  &.active, &.thinking {
+    margin-top: 0;
+  }
+  &.speaking {
+    transform: translate(-50px, -40px) rotate3d(2, -2, 1, 45deg);
+    margin-top: 0px;
+    width: 100%;
+
+    .bar {
+      animation: sound 0ms -600ms linear infinite alternate;
+    }
+
+    .bar:nth-child(1) {
+      left: 1px;
+      animation-duration: 474ms;
+    }
+
+    .bar:nth-child(2) {
+      left: 15px;
+      animation-duration: 433ms;
+    }
+
+    .bar:nth-child(3) {
+      left: 29px;
+      animation-duration: 407ms;
+    }
+
+    .bar:nth-child(4) {
+      left: 43px;
+      animation-duration: 458ms;
+    }
+
+    .bar:nth-child(5) {
+      left: 57px;
+      animation-duration: 400ms;
+    }
+
+    .bar:nth-child(6) {
+      left: 71px;
+      animation-duration: 427ms;
+    }
+
+    .bar:nth-child(7) {
+      left: 85px;
+      animation-duration: 441ms;
+    }
+
+    .bar:nth-child(8) {
+      left: 99px;
+      animation-duration: 419ms;
+    }
+
+    .bar:nth-child(9) {
+      left: 113px;
+      animation-duration: 487ms;
+    }
+
+    .bar:nth-child(10) {
+      left: 127px;
+      animation-duration: 442ms;
+    }
+
+  }
 }
 
 .bar {
-  background: #b9af2c;
+  background: rgb(113, 238, 255);
   bottom: 1px;
   height: 3px;
   width: 10px;
   margin: 0px 4px;
   border-radius: 5px;
-  animation: sound 0ms -600ms linear infinite alternate;
 }
 
 @keyframes sound {
@@ -209,58 +307,213 @@ export default {
   }
 }
 
-.bar:nth-child(1) {
-  left: 1px;
-  animation-duration: 474ms;
-}
+@keyframes sound {
+  0% {
+    opacity: .35;
+    height: 3px;
+  }
 
-.bar:nth-child(2) {
-  left: 15px;
-  animation-duration: 433ms;
-}
-
-.bar:nth-child(3) {
-  left: 29px;
-  animation-duration: 407ms;
-}
-
-.bar:nth-child(4) {
-  left: 43px;
-  animation-duration: 458ms;
-}
-
-.bar:nth-child(5) {
-  left: 57px;
-  animation-duration: 400ms;
-}
-
-.bar:nth-child(6) {
-  left: 71px;
-  animation-duration: 427ms;
-}
-
-.bar:nth-child(7) {
-  left: 85px;
-  animation-duration: 441ms;
-}
-
-.bar:nth-child(8) {
-  left: 99px;
-  animation-duration: 419ms;
-}
-
-.bar:nth-child(9) {
-  left: 113px;
-  animation-duration: 487ms;
-}
-
-.bar:nth-child(10) {
-  left: 127px;
-  animation-duration: 442ms;
+  100% {
+    opacity: 1;
+    height: 70px;
+  }
 }
 
 img.meme {
   max-width: 100%;
   max-height: 600px;
+}
+
+
+span.active-indicator {
+  position: absolute;
+
+  display: none;
+
+  &.top {
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 20px;
+    background: linear-gradient(90deg,
+        transparent 50%,
+        rgb(113, 238, 255),
+        rgba(105, 170, 248, 0.5),
+      );
+    animation: animateTop 4s linear infinite;
+  }
+
+  &.bottom {
+    right: 0;
+    bottom: 0;
+    height: 20px;
+    background: linear-gradient(90deg,
+        rgb(113, 238, 255),
+        rgba(105, 170, 248, 0.5),
+        transparent 50%);
+    animation: animateBottom 4s linear infinite;
+  }
+
+  &.right {
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 0;
+    background: linear-gradient(180deg,
+        transparent 30%,
+        rgb(113, 238, 255),
+        rgba(105, 170, 248, 0.5),
+      );
+    animation: animateRight 4s linear infinite;
+  }
+
+  &.left {
+    left: 0;
+    bottom: 0;
+    width: 20px;
+    height: 0;
+    background: linear-gradient(180deg,
+        rgb(113, 238, 255),
+        rgba(105, 170, 248, 0.5),
+        transparent 70%);
+    animation: animateLeft 4s linear infinite;
+  }
+}
+
+.ai-assistant {
+
+  &.active,
+  &.speaking,
+  &.thinking,
+  &.awake {
+    #eyes {
+      .inner-eye {
+        height: 150px;
+        border-radius: 40%;
+        width: 150px;
+        transform: translateY(-65px);
+        position: relative;
+
+        .pupil {
+          opacity: 1;
+        }
+      }
+    } 
+  }
+
+  &.thinking {
+    #eyes {
+      .inner-eye {
+        .pupil {
+          position: absolute;
+          top: 0;
+          left: 60px;
+        }
+      }
+    }
+  }
+}
+
+#eyes {
+  position: relative;
+  .pupil {
+    transition: all 0.2s;
+    width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          border: 30px solid #71eeff;
+          position: absolute;
+          top: 70px;
+    left: 30px;
+    opacity: 0;
+  }
+
+  .inner-eye {
+    transition: all .2s ease-out;
+    border: 10px solid rgb(113, 238, 255);
+    height: 20px;
+    width: 100px;
+  }
+
+  .eye {
+    padding: 30px;
+  }
+
+  .left {
+    float: right;
+  }
+
+  .right {
+    float: left;
+  }
+}
+
+@keyframes animateTop {
+  25% {
+    width: 100%;
+    opacity: 1;
+  }
+
+  26%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes animateBottom {
+
+  0%,
+  50% {
+    opacity: 1;
+    width: 0;
+  }
+
+  75% {
+    opacity: 1;
+    width: 100%;
+  }
+
+  76%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes animateRight {
+
+  0%,
+  25% {
+    opacity: 1;
+    height: 0;
+  }
+
+  50% {
+    opacity: 1;
+    height: 100%;
+  }
+
+  51%,
+  100% {
+    height: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes animateLeft {
+  0% {
+    opacity: 0;
+    height: 0%;
+  }
+
+  75% {
+    opacity: 1;
+    bottom: 0;
+    height: 0;
+  }
+
+  100% {
+    opacity: 1;
+    height: 100%;
+  }
 }
 </style>

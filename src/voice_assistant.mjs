@@ -14,9 +14,11 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const lang = 'de';
+const lang = 'en';
+const answerWordLimit = 50;
 
 let lastRequestId = null;
+const eventTimeoutMs = 200;
 
 const modelPaths = {
     de: __dirname + "/../language_models/vosk-model-de-0.21",
@@ -38,6 +40,21 @@ const voices = {
     en: 'en-US-Neural2-I'//A,D,I
 }
 
+const messagePostFix = {
+    en: `Answer in less than ${answerWordLimit} words if possible.`,
+    de: `Antworte in unter ${answerWordLimit} Wörtern, wenn möglich.`
+}
+
+const systemMessages = {
+    de: `Du bist ein virtueller Sprach-Assistent. Dein Name ist ${voiceAssistantNames['de']}. Du gibst kurze genaue Antworten. Aktuelles Datum ist: ${new Date().toISOString()}\n\n`,
+    en: `Your are a virtual voice assistant. Your name is ${voiceAssistantNames['en']}. You give short concrete answers. Current date is: ${new Date().toISOString()}\n\n`
+}
+
+const continueMatches = {
+    de: 'nochmal',
+    en: 'next'
+}
+
 const MODEL_PATH = modelPaths[lang];
 const SAMPLE_RATE = 16000;
 
@@ -51,10 +68,21 @@ const debug = false;
 const model = new vosk.Model(MODEL_PATH);
 let rec = new vosk.Recognizer({ model: model, sampleRate: SAMPLE_RATE });
 
-const systemMessage = `Du bist CorgiAI - eine virtueller braver Hund und Sprachassistent. Dein Name ist ${voiceAssistantNames[lang]}. Dein liebst deinen Besitzer Hoschi. Du bringst das in all deinen Antworten zum ausdruck.`;
+const systemMessage = systemMessages[lang];
 const chatGPTAPI = new ChatGPTAPI({ apiKey: process.env.OPEN_AI_APIKEY, systemMessage })
 const ttsApi = new textToSpeech.TextToSpeechClient();
 let memeLoop = false;
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function triggerEvent(name, value) {
+    const event = { name, value };
+    const events = [event];
+    const data = JSON.stringify(events);
+    console.log(data);
+}
 
 async function synthesizeSpeech(text) {
     // Construct the request
@@ -71,12 +99,13 @@ async function synthesizeSpeech(text) {
     // Write the binary audio content to a local file
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(`./sounds/${lang}/gpt_answer.mp3`, response.audioContent, 'binary');
+    await sleep(eventTimeoutMs);
 }
 
 async function askChatGpt(message) {
     const opts = {};
 
-    message = `${message}. Antworte in unter 30 Wörtern.`;
+    message = `${message}. ${messagePostFix[lang]}`;
     if (lastRequestId) {
         opts.parentMessageId = lastRequestId
     }
@@ -91,14 +120,8 @@ async function fetchMeme() {
     const response = await fetch(memeApi);
     const result = await response.json();
 
-    const event = {
-        name: 'meme',
-        value: result.url
-    };
-    const events = [event]
-    const data = JSON.stringify(events);
-    console.log(data);
-  }
+    triggerEvent('meme', result.url);
+}
 
 const micInstance = mic({
     rate: String(SAMPLE_RATE),
@@ -164,13 +187,21 @@ const voiceRecognition = {
             rec.reset();
         }
         if (!active || disabled) return;
-        const isSilent = rec.acceptWaveform(data);4
+        const isSilent = rec.acceptWaveform(data); 4
 
         let isFinalAttempt = false;
         let result = rec.partialResult();
 
+        if (result.partial.includes('stop') && result.partial.length <= 10) {
+            triggerEvent('stop', true);
+            rec.reset();
+            active = false;
+            return;
+        }
+
         let inputTooShort = result.partial && result.partial.length < 6;
-        if (!result.partial || inputTooShort) {
+        let notEnoughWords = result.partial.split(' ').length < 3;
+        if (!result.partial || inputTooShort || notEnoughWords) {
             return;
         }
         if (result.partial === recordingCache) {
@@ -185,17 +216,21 @@ const voiceRecognition = {
             result = rec.finalResult();
         }
 
+
         if (isSilent || isFinalAttempt) {
             result = isFinalAttempt ? result : rec.result();
             result = normalizeResult(result);
+
+            if (result.text.includes('stop') && result.text.length <= 20) {
+                triggerEvent('stop', true);
+                rec.reset();
+                active = false;
+                return;
+            }
+
+            
             if (result.text && debug) {
-                const event = {
-                    name: 'voice_input_debug',
-                    value: result.text
-                };
-                const events = [event]
-                const data = JSON.stringify(events);
-                console.log(data);
+                triggerEvent('voice_input_debug', result.text)
             }
 
             let questionEvent = {
@@ -215,33 +250,13 @@ const voiceRecognition = {
 
             const answer = await askChatGpt(result.text);
 
-            const gptAnswerEvent = {
-                name: 'answer',
-                value: answer
-            }
-            events = [gptAnswerEvent];
-            data = JSON.stringify(events);
-            console.log(data);
-
+            triggerEvent('answer', answer);
             await synthesizeSpeech(answer);
-            const ttsEvent = {
-                name: 'tts',
-                value: true
-            }
-            events = [ttsEvent];
-            data = JSON.stringify(events);
-            console.log(data);
-
-            playSound('gpt_answer', true)
+            triggerEvent('tts', true);
+            playSound('gpt_answer', true);
         } else {
             if (result.partial && debug) {
-                const event = {
-                    name: 'voice_input_partial',
-                    value: result.partial
-                };
-                const events = [event]
-                const data = JSON.stringify(events);
-                console.log(data);
+                triggerEvent('voice_input_partial', result.partial)
             }
 
         }
@@ -260,7 +275,6 @@ const voiceRecognition = {
         }
 
         result = normalizeResult(result);
-
         let match = false;
         voiceRecognition.hotwords[lang].forEach(hotword => {
             if (result.text.includes(hotword)) {
@@ -269,38 +283,14 @@ const voiceRecognition = {
         });
 
         if (result.text && debug) {
-            const event = {
-                name: 'voice_input_hotword',
-                value: result.text
-            };
-            const events = [event]
-            const data = JSON.stringify(events);
-            console.log(data);
+            triggerEvent('voice_input_hotword', result.text);
         }
 
         if (match) {
-            const event = {
-                name: 'hotword',
-                value: true
-            };
-            const events = [event]
-            const data = JSON.stringify(events);
             rec.reset();
-            console.log(data);
             active = true;
-            disabled = true;
-
-            playSound('hotword_answer_1', false);
-            setTimeout(() => {
-                const event = {
-                    name: 'voice_input_start',
-                    value: true
-                };
-                const events = [event]
-                const data = JSON.stringify(events);
-                console.log(data);
-                disabled = false;
-            }, minimumDisabledMs)
+            disabled = false;
+            triggerEvent('voice_input_start', true);
         }
 
         let memeMatch = false;
@@ -312,16 +302,9 @@ const voiceRecognition = {
 
         if (memeMatch) {
             memeLoop = true;
-            const event = {
-                name: 'meme_hotword',
-                value: true
-            };
-            const events = [event]
-            const data = JSON.stringify(events);
             rec.reset();
-            console.log(data);
             disabled = true;
-
+            triggerEvent('meme_hotword', true);
             fetchMeme();
             playSound('meme_hotword_answer', false);
             setTimeout(() => {
@@ -329,17 +312,11 @@ const voiceRecognition = {
             }, minimumDisabledMs)
         }
 
-        let memeContinueMatch = result.text.includes('nochmal');
+        let memeContinueMatch = result.text.includes(continueMatches[lang]);
 
         if (memeContinueMatch && memeLoop) {
             disabled = true;
-            const event = {
-                name: 'meme',
-                value: true
-            };
-            const events = [event]
-            const data = JSON.stringify(events);
-            console.log(data);
+            triggerEvent('meme', true);
             fetchMeme();
             setTimeout(() => {
                 disabled = false;
@@ -350,14 +327,8 @@ const voiceRecognition = {
 
         if (stopMatch && memeLoop) {
             memeLoop = false;
-            const event = {
-                name: 'meme_stop',
-                value: true
-            };
-            const events = [event]
-            const data = JSON.stringify(events);
             rec.reset();
-            console.log(data);
+            triggerEvent('meme_stop', true);
         }
     },
     checkStop: async (data) => {
@@ -377,38 +348,30 @@ const voiceRecognition = {
         }
 
         if (match) {
-            const event = {
-                name: 'stop',
-                value: true
-            };
-            const events = [event]
-            const data = JSON.stringify(events);
             rec.reset();
-            console.log(data);
             active = false;
             disabled = false;
+            triggerEvent('stop', true);
         }
     }
 }
 
-async function playSound(name, triggerEvent) {
+async function playSound(name) {
     disabled = true;
     const audic = new Audic(`./sounds/${lang}/${name}.mp3`);
-    audic.addEventListener('ended', () => {
-        setTimeout(() => {
-            disabled = false;
-        }, minimumDisabledMs);
-        if (triggerEvent) {
-            const event = {
-                name: 'tts_end',
-                value: true
-            };
-            const events = [event]
-            const data = JSON.stringify(events);
-            console.log(data);
-        }
-    });
-    await audic.play();
+    audic.play();
+    // we only add ended listener after we started playing
+    // otherwise ended will often trigger right after start
+    // when audio in reality is still running
+    setTimeout(() => {
+        audic.addEventListener('ended', () => {
+            setTimeout(() => {
+                disabled = false;
+            }, minimumDisabledMs);
+    
+           triggerEvent('tts_end', true);
+        });
+    }, 1000);
 }
 
 function normalizeResult(result) {
@@ -420,14 +383,25 @@ function normalizeResult(result) {
         result.text = result.text.replace('wie kann ich helfen', '');
     }
     if (lang === 'en') {
+        if (result.text.startsWith('a ')) {
+            result.text = result.text.substring(3);
+        }
+        if (result.text.startsWith('please')) {
+            result.text = result.text === 'please' ? '' : result.text.substring(7);
+        }
         if (result.text.startsWith('the')) {
             result.text = result.text === 'the' ? '' : result.text.substring(4);
         }
 
         result.text = result.text.replace('how can I help', '');
     }
+
+    result.text = result.text.trim();
+
     return result;
 }
 
-console.log(JSON.stringify([{name: 'LOG:', value: 'Start recording...'}]));
+console.log(JSON.stringify([{ name: 'LOG:', value: 'Start recording...' }]));
 voiceRecognition.start();
+
+// playSound('hotword_answer_1', false);

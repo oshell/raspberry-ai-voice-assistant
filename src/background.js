@@ -6,6 +6,7 @@ import nodeChildProcess from 'child_process';
 import 'isomorphic-fetch';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
+const shouldMaximize = true;
 
 let win;
 
@@ -26,6 +27,9 @@ async function createWindow() {
     }
   })
 
+  if (shouldMaximize) {
+    win.maximize();
+  }
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
     await win.loadURL(process.env.WEBPACK_DEV_SERVER_URL)
@@ -95,10 +99,13 @@ function handleNotification(data) {
   } 
 }
 
-let script = nodeChildProcess.spawn('node', ['src/voice_assistant.mjs']);
-script.stdout.on('data', handleNotification);
-
-process.on('exit', function() {
-  console.log('Killing child process onexit!');
-  script.kill();
-});
+const startVoskChildProcess = true;
+if (startVoskChildProcess) {
+  let script = nodeChildProcess.spawn('node', ['src/voice_assistant.mjs']);
+  script.stdout.on('data', handleNotification);
+  
+  process.on('exit', function() {
+    console.log('Killing child process onexit!');
+    script.kill();
+  });
+}
