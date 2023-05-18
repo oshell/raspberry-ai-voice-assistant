@@ -116,7 +116,9 @@ function checkCpuTemprature() {
     si.cpuTemperature().then((result) => {
         if (result) {
             const mainTemp = result.main;
-            win.webContents.send('cpu', mainTemp);
+            if (win && win.webContents) {
+              win.webContents.send('cpu', mainTemp);
+            }
         }
     })
 }
