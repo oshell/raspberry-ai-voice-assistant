@@ -21,7 +21,8 @@ const answerWordLimit = 50;
 let lastRequestId = null;
 const eventTimeoutMs = 200;
 
-const lowMemoryVariant = true;
+const lowMemoryVariant = false;
+const debug = false;
 
 let modelPaths = {
     de: __dirname + "/../language_models/vosk-model-de-0.21",
@@ -74,7 +75,6 @@ if (!fs.existsSync(MODEL_PATH)) {
 }
 
 vosk.setLogLevel(0);
-const debug = false;
 const model = new vosk.Model(MODEL_PATH);
 let rec = new vosk.Recognizer({ model: model, sampleRate: SAMPLE_RATE });
 
