@@ -2,6 +2,14 @@
   <v-container :class="['ai-assistant', status]">
     <v-row class="text-center">
       <v-col cols="12">
+        <div class="system-info">
+          <span v-if="temprature">
+            CPU: {{ temprature }}°
+          </span>
+          <span>
+            Time: {{ time }}
+          </span>
+        </div>
         <v-progress-circular class="spinner" size="70" v-if="loading" indeterminate color="#71eeff"></v-progress-circular>
         <div class="avatar">
           <v-row id="eyes">
@@ -74,7 +82,9 @@ export default {
     loading: false,
     dialog: false,
     meme: null,
-    translations: translations[lang]
+    temprature: null,
+    translations: translations[lang],
+    time: ''
   }),
   mounted() {
     ipcRenderer.on('hotword', this.handleHotwordTrigger);
@@ -85,9 +95,14 @@ export default {
     ipcRenderer.on('stop', this.handleStop);
     ipcRenderer.on('meme', this.handleMeme);
     ipcRenderer.on('meme_stop', this.handleMemeStop);
+    ipcRenderer.on('cpu', this.handleCpu);
     window.addEventListener('keypress', this.handleKeyPress);
+    this.showTime();
   },
   methods: {
+    handleCpu(eventName, cpuCelsius) {
+      this.temprature = cpuCelsius;
+    },
     handleHotwordTrigger() {
       this.status = 'speaking';
     },
@@ -102,8 +117,8 @@ export default {
       }, 2000);
     },
     handlePlayEnd() {
-      setTimeout(() => {this.status = 'awake';}, 1000);
-      setTimeout(() => {this.status = 'inactive';}, 3000);
+      setTimeout(() => { this.status = 'awake'; }, 200);
+      setTimeout(() => { this.status = 'inactive'; }, 2000);
     },
     handleStop() {
       this.status = 'inactive';
@@ -147,6 +162,30 @@ export default {
     handleClose() {
       this.meme = null;
       this.dialog = false;
+    },
+    showTime() {
+      const date = new Date();
+      let h = date.getHours(); // 0 - 23
+      let m = date.getMinutes(); // 0 - 59
+      let s = date.getSeconds(); // 0 - 59
+      let session = "AM";
+
+      if (h == 0) {
+        h = 12;
+      }
+
+      if (h > 12) {
+        h = h - 12;
+        session = "PM";
+      }
+
+      h = (h < 10) ? "0" + h : h;
+      m = (m < 10) ? "0" + m : m;
+      s = (s < 10) ? "0" + s : s;
+
+      var time = h + ":" + m + ":" + s + " " + session;
+      this.time = time;
+      setTimeout(this.showTime, 1000);
     }
   },
 };
@@ -221,9 +260,11 @@ export default {
   width: 50%;
   margin-top: 30px;
 
-  &.active, &.thinking {
+  &.active,
+  &.thinking {
     margin-top: 0;
   }
+
   &.speaking {
     transform: translate(-50px, -40px) rotate3d(2, -2, 1, 45deg);
     margin-top: 0px;
@@ -398,7 +439,7 @@ span.active-indicator {
           opacity: 1;
         }
       }
-    } 
+    }
   }
 
   &.thinking {
@@ -416,14 +457,15 @@ span.active-indicator {
 
 #eyes {
   position: relative;
+
   .pupil {
     transition: all 0.2s;
     width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          border: 30px solid #71eeff;
-          position: absolute;
-          top: 70px;
+    height: 60px;
+    border-radius: 50%;
+    border: 30px solid #71eeff;
+    position: absolute;
+    top: 70px;
     left: 30px;
     opacity: 0;
   }
@@ -514,6 +556,16 @@ span.active-indicator {
   100% {
     opacity: 1;
     height: 100%;
+  }
+}
+
+.system-info {
+  position: absolute;
+  left: 10px;
+  color: rgb(113, 238, 255);
+  span {
+    display: block;
+    text-align: left;
   }
 }
 </style>

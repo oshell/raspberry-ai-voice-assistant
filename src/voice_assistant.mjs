@@ -9,12 +9,13 @@ import dotenv from "dotenv";
 import { ChatGPTAPI } from 'chatgpt';
 import textToSpeech from "@google-cloud/text-to-speech";
 import Audic from 'audic';
-
+import getMP3Duration from 'get-mp3-duration';
+ 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const lang = 'en';
+const lang = 'de';
 const answerWordLimit = 50;
 
 let lastRequestId = null;
@@ -358,20 +359,21 @@ const voiceRecognition = {
 
 async function playSound(name) {
     disabled = true;
-    const audic = new Audic(`./sounds/${lang}/${name}.mp3`);
+    const mp3File = `./sounds/${lang}/${name}.mp3`;
+    const buffer = fs.readFileSync(mp3File);
+    const duration = getMP3Duration(buffer);
+    const audic = new Audic(mp3File);
+    // ended event does not work correctly
+    // workaround is getting duration of mp3 in ms
+    // then when sound starts playing we set timeout 
+    // to trigger end event of tts
+    audic.addEventListener('playing', () => {
+        setTimeout(() => {
+            disabled = false;
+            triggerEvent('tts_end', true);
+        }, duration);
+    });
     audic.play();
-    // we only add ended listener after we started playing
-    // otherwise ended will often trigger right after start
-    // when audio in reality is still running
-    setTimeout(() => {
-        audic.addEventListener('ended', () => {
-            setTimeout(() => {
-                disabled = false;
-            }, minimumDisabledMs);
-    
-           triggerEvent('tts_end', true);
-        });
-    }, 1000);
 }
 
 function normalizeResult(result) {
@@ -402,6 +404,5 @@ function normalizeResult(result) {
 }
 
 console.log(JSON.stringify([{ name: 'LOG:', value: 'Start recording...' }]));
+//playSound('hotword_answer_1', false);
 voiceRecognition.start();
-
-// playSound('hotword_answer_1', false);

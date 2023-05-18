@@ -3,6 +3,7 @@ import { app, protocol, BrowserWindow, ipcMain } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 import nodeChildProcess from 'child_process';
+import si from 'systeminformation';
 import 'isomorphic-fetch';
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
@@ -109,3 +110,16 @@ if (startVoskChildProcess) {
     script.kill();
   });
 }
+const tempratureCheckIntervall = 5000
+
+function checkCpuTemprature() {
+    si.cpuTemperature().then((result) => {
+        if (result) {
+            const mainTemp = result.main;
+            win.webContents.send('cpu', mainTemp);
+        }
+    })
+}
+
+checkCpuTemprature();
+setInterval(checkCpuTemprature, tempratureCheckIntervall);
