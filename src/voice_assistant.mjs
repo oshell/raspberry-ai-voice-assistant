@@ -21,9 +21,18 @@ const answerWordLimit = 50;
 let lastRequestId = null;
 const eventTimeoutMs = 200;
 
-const modelPaths = {
+const lowMemoryVariant = true;
+
+let modelPaths = {
     de: __dirname + "/../language_models/vosk-model-de-0.21",
     en: __dirname + "/../language_models/vosk-model-en-us-0.22"
+}
+
+if (lowMemoryVariant) {
+    modelPaths = {
+        de: __dirname + "/../language_models/vosk-model-small-de-0.15",
+        en: __dirname + "/../language_models/vosk-model-en-us-0.22-lgraph"
+    }
 }
 
 const languageMapping = {
