@@ -17,10 +17,8 @@ const request = {
   interimResults: false, // If you want interim results, set this to true
 };
 
-let callback = (result) => {
-  console.log('result');
-  console.log(result);
-}
+let callback = () => {};
+
 // Create a recognize stream
 const recognizeStream = client
   .streamingRecognize(request)
