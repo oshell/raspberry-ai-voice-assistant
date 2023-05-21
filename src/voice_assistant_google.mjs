@@ -18,7 +18,7 @@ const memeTrigger = config.memeTrigger;
 const systemMessage = config.gptSystemMessage;
 
 let lastRequestId = null;
-const eventTimeoutMs = 200;
+const eventTimeoutMs = 500;
 const debug = false;
 
 const languageMapping = {
