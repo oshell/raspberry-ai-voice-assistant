@@ -10,18 +10,22 @@ import { ChatGPTAPI } from 'chatgpt';
 import textToSpeech from "@google-cloud/text-to-speech";
 import Audic from 'audic';
 import getMP3Duration from 'get-mp3-duration';
+import config from '../assistant_config.mjs';
  
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const lang = 'en';
-const answerWordLimit = 50;
+const lang = config.language;
+const answerWordLimit = config.answerWordLimit;
+const lowMemoryVariant = config.lowMemoryVariant;
+const assistantName = config.assistantName;
+const memeTrigger = config.memeTrigger;
+const systemMessage = config.gptSystemMessage;
 
 let lastRequestId = null;
 const eventTimeoutMs = 200;
 
-const lowMemoryVariant = false;
 const debug = false;
 
 let modelPaths = {
@@ -41,11 +45,6 @@ const languageMapping = {
     de: 'de-DE'
 }
 
-const voiceAssistantNames = {
-    en: 'Buddy',
-    de: 'Charlie'
-}
-
 const voices = {
     de: 'de-DE-Neural2-B',//A,C,D
     en: 'en-US-Neural2-I'//A,D,I
@@ -54,11 +53,6 @@ const voices = {
 const messagePostFix = {
     en: `Answer in less than ${answerWordLimit} words if possible.`,
     de: `Antworte in unter ${answerWordLimit} Wörtern, wenn möglich.`
-}
-
-const systemMessages = {
-    de: `Du bist ein virtueller Sprach-Assistent. Dein Name ist ${voiceAssistantNames['de']}. Du gibst kurze genaue Antworten. Aktuelles Datum ist: ${new Date().toISOString()}\n\n`,
-    en: `Your are a virtual voice assistant. Your name is ${voiceAssistantNames['en']}. You give short concrete answers. Current date is: ${new Date().toISOString()}\n\n`
 }
 
 const continueMatches = {
@@ -78,7 +72,7 @@ vosk.setLogLevel(0);
 const model = new vosk.Model(MODEL_PATH);
 let rec = new vosk.Recognizer({ model: model, sampleRate: SAMPLE_RATE });
 
-const systemMessage = systemMessages[lang];
+
 const chatGPTAPI = new ChatGPTAPI({ apiKey: process.env.OPEN_AI_APIKEY, systemMessage })
 const ttsApi = new textToSpeech.TextToSpeechClient();
 let memeLoop = false;
@@ -149,28 +143,18 @@ const maxAttemptsRecording = 5;
 
 const voiceRecognition = {
     hotwords: {
-        en: [
-            'hey buddy',
-            'the buddy',
-        ],
-        de: [
-            'hey charlie',
-            'hey charly',
-            'he charlie',
-            'he charly',
-        ],
-        meme: {
-            en: [
-                'make me laugh',
-                'make me love',
-            ],
-            de: [
-                'bring mich zum lachen',
-                'bring mich zum machen',
-            ]
-        }
+        activate: [],
+        activateMeme: ''
+    },
+    initHotwords: () => {
+        const prefixes = ['hey', 'he', 'the']
+        voiceRecognition.hotwords.activate = prefixes.map(prefix => {
+            return `${prefix} ${assistantName}`;
+        });
+        voiceRecognition.hotwords.activateMeme = memeTrigger;
     },
     start: () => {
+        voiceRecognition.initHotwords();
         const micInputStream = micInstance.getAudioStream();
 
         micInputStream.on('data', data => {
@@ -286,7 +270,7 @@ const voiceRecognition = {
 
         result = normalizeResult(result);
         let match = false;
-        voiceRecognition.hotwords[lang].forEach(hotword => {
+        voiceRecognition.hotwords.activate.forEach(hotword => {
             if (result.text.includes(hotword)) {
                 match = true;
             }
@@ -304,11 +288,9 @@ const voiceRecognition = {
         }
 
         let memeMatch = false;
-        voiceRecognition.hotwords.meme[lang].forEach(hotword => {
-            if (result.text.includes(hotword)) {
-                memeMatch = true;
-            }
-        });
+        if (result.text.includes(voiceRecognition.hotwords.activateMeme)) {
+            memeMatch = true;
+        }
 
         if (memeMatch) {
             memeLoop = true;
@@ -412,6 +394,5 @@ function normalizeResult(result) {
     return result;
 }
 
-console.log(JSON.stringify([{ name: 'LOG:', value: 'Start recording...' }]));
-//playSound('hotword_answer_1', false);
+console.log(JSON.stringify([{ name: 'LOG:', value: 'Vosk Speech-to-Text started!' }]));
 voiceRecognition.start();

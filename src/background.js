@@ -5,9 +5,9 @@ import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 import nodeChildProcess from 'child_process';
 import si from 'systeminformation';
 import 'isomorphic-fetch';
+import config from '../assistant_config.mjs'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
-const shouldMaximize = true;
 
 let win;
 
@@ -23,6 +23,7 @@ async function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
+      devTools: false
     },
     show: false,
     fullscreen: true
@@ -98,9 +99,11 @@ function handleNotification(data) {
   } 
 }
 
+const speechToTextService = config.useLocalSpeechToText ? 'vosk' : 'google';
+
 const startVoskChildProcess = true;
 if (startVoskChildProcess) {
-  let script = nodeChildProcess.spawn('node', ['src/voice_assistant.mjs']);
+  let script = nodeChildProcess.spawn('node', [`src/voice_assistant_${speechToTextService}.mjs`]);
   script.stdout.on('data', handleNotification);
   
   process.on('exit', function() {

@@ -25,5 +25,14 @@ export default {
 <style>
 .main-container {
   background-color: black;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+  overflow: hidden;
 }
 </style>
