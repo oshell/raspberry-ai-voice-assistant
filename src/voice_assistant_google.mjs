@@ -133,9 +133,11 @@ const voiceRecognition = {
             return;
         }
 
+        text = text.trim();
         let inputTooShort = text && text.length < 6;
         let notEnoughWords = text.split(' ').length < 3;
-        if (!text || inputTooShort || notEnoughWords) {
+        let containsHotWord = text.includes(assistantName) && text.legth < 12;
+        if (!text || inputTooShort || notEnoughWords || containsHotWord) {
             return;
         }
 
