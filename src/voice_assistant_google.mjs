@@ -105,9 +105,9 @@ const voiceRecognition = {
         activateMeme: ''
     },
     initHotwords: () => {
-        const prefixes = ['hey ', 'he ', 'the ', '']
+        const prefixes = ['hey ', 'he ', 'the ', 'hi ', '']
         voiceRecognition.hotwords.activate = prefixes.map(prefix => {
-            return `${prefix}${assistantName}`;
+            return `${prefix}${assistantName.toLocaleLowerCase()}`;
         });
         voiceRecognition.hotwords.activateMeme = memeTrigger;
     },
@@ -143,11 +143,6 @@ const voiceRecognition = {
             triggerEvent('stop', true);
             active = false;
             return;
-        }
-
-
-        if (text && debug) {
-            triggerEvent('voice_input_debug', text)
         }
 
         let questionEvent = {
@@ -186,7 +181,9 @@ const voiceRecognition = {
 
         if (match) {
             active = true;
-            disabled = false;
+            setTimeout(() => {
+                disabled = false;
+            }, eventTimeoutMs);
             triggerEvent('voice_input_start', true);
         }
 
@@ -261,7 +258,7 @@ async function playSound(name) {
 
 function normalizeResult(text) {
     text = text.trim();
-    return text;
+    return text.toLocaleLowerCase();
 }
 
 console.log(JSON.stringify([{ name: 'LOG:', value: 'Google Speech-to-Text started!' }]));
