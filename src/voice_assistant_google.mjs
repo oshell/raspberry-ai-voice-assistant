@@ -105,9 +105,9 @@ const voiceRecognition = {
         activateMeme: ''
     },
     initHotwords: () => {
-        const prefixes = ['hey', 'he', 'the']
+        const prefixes = ['hey ', 'he ', 'the ', '']
         voiceRecognition.hotwords.activate = prefixes.map(prefix => {
-            return `${prefix} ${assistantName}`;
+            return `${prefix}${assistantName}`;
         });
         voiceRecognition.hotwords.activateMeme = memeTrigger;
     },

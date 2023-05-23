@@ -1,4 +1,4 @@
-const assistantName = 'Charlie';
+const assistantName = 'Felix';
 
 export default {
     'useLocalSpeechToText': false, // if true uses vosk (free), if false uses google speech to text
