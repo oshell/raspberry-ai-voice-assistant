@@ -6,34 +6,32 @@ const client = new speech.SpeechClient();
 
 const encoding = 'LINEAR16';
 const sampleRateHertz = 16000;
-const languageCode = 'en-US';
-
-const request = {
-  config: {
-    encoding: encoding,
-    sampleRateHertz: sampleRateHertz,
-    languageCode: languageCode,
-  },
-  interimResults: false, // If you want interim results, set this to true
-};
-
+let request = {};
 let callback = () => {};
-
-// Create a recognize stream
-const recognizeStream = client
-  .streamingRecognize(request)
-  .on('error', console.error)
-  .on('data', data => {
-    const success = data.results[0] && data.results[0].alternatives[0];
-    if (success) {
-      const result = data.results[0].alternatives[0].transcript;
-      callback(result);
-    }
-  });
+let recognizeStream = null;
 
 
-function startGoogleSpeechToText(func) {
+function startGoogleSpeechToText(func, langCode) {
+  request = {
+    config: {
+      encoding: encoding,
+      sampleRateHertz: sampleRateHertz,
+      languageCode: langCode,
+    },
+    interimResults: false, // If you want interim results, set this to true
+  };
   callback = func;
+
+  recognizeStream = client
+    .streamingRecognize(request)
+    .on('error', console.error)
+    .on('data', data => {
+      const success = data.results[0] && data.results[0].alternatives[0];
+      if (success) {
+        const result = data.results[0].alternatives[0].transcript;
+        callback(result);
+      }
+    });
   // Start recording and send the microphone input to the Speech API.
   // Ensure SoX is installed, see https://www.npmjs.com/package/node-record-lpcm16#dependencies
   recorder

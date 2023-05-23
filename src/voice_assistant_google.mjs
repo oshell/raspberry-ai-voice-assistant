@@ -112,13 +112,18 @@ const voiceRecognition = {
         voiceRecognition.hotwords.activateMeme = memeTrigger;
     },
     googleSttCallback: (text) => {
+        if (text && debug) {
+            triggerEvent('google_stt_debug', text);
+            return;
+        }
         voiceRecognition.checkHotword(text);
         voiceRecognition.handleInput(text);
         voiceRecognition.checkStop(text);
     },
     start: () => {
         voiceRecognition.initHotwords();
-        startGoogleSpeechToText(voiceRecognition.googleSttCallback);
+        const googleLang = languageMapping[lang];
+        startGoogleSpeechToText(voiceRecognition.googleSttCallback, googleLang);
     },
     handleInput: async (text) => {
         if (!active || disabled) return;
@@ -178,10 +183,6 @@ const voiceRecognition = {
                 match = true;
             }
         });
-
-        if (text && debug) {
-            triggerEvent('voice_input_hotword', text);
-        }
 
         if (match) {
             active = true;
