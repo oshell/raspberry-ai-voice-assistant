@@ -9,7 +9,7 @@ on machines with enough power, you can use vosk for complete offline voice recgn
 - node 16 (recommended install via nvm https://github.com/nvm-sh/nvm)
 ## Project setup
 ```
-npm install --legacy-pper-deps
+npm install --legacy-peer-deps
 ```
 
 ## Google Setup
