@@ -2,9 +2,14 @@
 
 electron based ai voice assistant utilizing gcloud text-to-speech and speech-to-text and openai chatgpt.
 on machines with enough power, you can use vosk for complete offline voice recgnition.
+
+## Prerequisite
+
+- debian based OS (tested on Ubuntu and Raspberrypi OS)
+- node 16 (recommended install via nvm https://github.com/nvm-sh/nvm)
 ## Project setup
 ```
-npm install
+npm install --legacy-pper-deps
 ```
 
 ## Google Setup
